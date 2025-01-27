@@ -6,7 +6,6 @@ function List({ toggleCreate, fee, provider, factory }) {
     const name = form.get("name")
     const symbol = form.get("symbol")
     const signer = await provider.getSigner()
-
     const tx = await factory.connect(signer).create(name, symbol, {value: fee})
     const receipt = await tx.wait()
 

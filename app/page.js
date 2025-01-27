@@ -19,23 +19,49 @@ export default function Home() {
   const [account, setAccount] = useState(null)
   const [factory, setFactory] = useState(null)
   const [fee, setFee] = useState(0)
+  const [token, setToken] = useState(null)
+  const [tokens, setTokens] = useState([])
   const [showCreate, setShowCreate] = useState(false)
+  const [showTrade, setShowTrade] = useState(false)
 
   function toggleCreate() {
     setShowCreate(!showCreate)
   }
 
+  function toggleTrade(token) {
+    setToken(token)
+    setShowTrade(!showTrade)
+  }
+
   async function loadBlockChainData() {
     const provider = new ethers.BrowserProvider(window.ethereum)
-    setProvider(provider)
-
     const network = await provider.getNetwork()
+    setProvider(provider)
 
     const factory = new ethers.Contract( config[network.chainId].factory.address, Factory, provider)
     setFactory(factory)
 
     const fee = await factory.fee()
     setFee(fee)
+
+    const totalTokens = await factory.totalTokens()
+    const tokens = []
+
+    for (let i = 0; i < totalTokens; i++) {
+      const sale = await factory.getTokenSale(i)
+      const token = {
+        token: sale.token, 
+        name: sale.name, 
+        creator: sale.creator, 
+        sold: sale.sold, 
+        raised: sale.raised, 
+        isOpen:sale.isOpen, 
+        image: images[i]
+      }
+      tokens.push(token)
+    }
+
+    setTokens(tokens.reverse())
   }
 
   useEffect(() => {
@@ -58,12 +84,31 @@ export default function Home() {
             )}
           </button>
         </div>
-
-        {showCreate && (
-          <List toggleCreate={toggleCreate} fee={fee} provider={provider} factory={factory}></List>
-        )}
+        <div className="listings">
+          <h1>new listings</h1>
+          <div className="tokens">
+            { !account ? (
+              <p>please connect wallet</p>
+            ) : tokens.length === 0 ? (
+              <p>no tokens listed</p>
+            ) : (
+              tokens.map((token, index) => (
+                <Token toggleTrade={toggleTrade} token={token} key={index}></Token>
+              ))
+            )}
+            
+          </div>
+        </div>
         
       </main>
+      
+      {showCreate && (
+        <List toggleCreate={toggleCreate} fee={fee} provider={provider} factory={factory}></List>
+      )}
+
+      {showTrade && (
+        <Trade toggleTrade={toggleTrade} token={token} provider={provider} factory={factory}></Trade>
+      )}
     </div>
   );
 }
